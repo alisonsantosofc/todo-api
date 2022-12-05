@@ -15,7 +15,7 @@ function checksExistsUserAccount(request, response, next) {
   const user = users.find((findUser) => findUser.username === username);
 
   if (!user) {
-    return response.status(400).json({ error: 'User does not exists.' });
+    return response.status(404).json({ error: 'User does not exists.' });
   }
 
   // forward the data
@@ -25,15 +25,57 @@ function checksExistsUserAccount(request, response, next) {
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const { user } = request;
+
+  if (user.pro || (!user.pro && user.todos.length < 10)) {
+    return next();
+  } else {
+    return response.status(403).json({ error: 'User does not have access to this feature.' });
+  }
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+  const { id } = request.params;
+
+  const isUuid = validate(id);
+
+  if (!isUuid) {
+    return response.status(400).json({ error: 'Invalid id.' });
+  }
+
+  const user = users.find((findUser) => findUser.username === username);
+
+  if (!user) {
+    return response.status(404).json({ error: 'User does not exists.' });
+  }
+
+  const todo = user.todos.find((findTodo) => findTodo.id === id);
+
+  if (todo) {
+    // forward the data
+    request.user = user;
+    request.todo = todo;
+
+    return next();
+  } else {
+    return response.status(404).json({ error: 'Task does not belong to the user.' });
+  }
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+
+  const user = users.find((findUser) => findUser.id === id);
+
+  if (!user) {
+    return response.status(404).json({ error: 'User does not exists.' });
+  }
+
+  // forward the data
+  request.user = user;
+
+  return next();
 }
 
 app.post('/users', (request, response) => {
@@ -42,7 +84,7 @@ app.post('/users', (request, response) => {
   const usernameAlreadyExists = users.some((user) => user.username === username);
 
   if (usernameAlreadyExists) {
-    return response.status(400).json({ error: 'Username already exists' });
+    return response.status(400).json({ error: 'Username already exists.' });
   }
 
   const user = {
